@@ -15,12 +15,12 @@ type IItemRepository interface {
 	Delete(itemId uint) error
 }
 
-type ItemMemoryRepository struct {
-	items []models.Item
-}
-
 type ItemRepository struct {
 	db *gorm.DB
+}
+
+func NewItemRepository(db *gorm.DB) IItemRepository {
+	return &ItemRepository{db: db}
 }
 
 func (r *ItemRepository) Create(newItem models.Item) (*models.Item, error) {
@@ -29,11 +29,6 @@ func (r *ItemRepository) Create(newItem models.Item) (*models.Item, error) {
 		return nil, result.Error
 	}
 	return &newItem, nil
-}
-
-// Delete implements IItemRepository.
-func (i *ItemRepository) Delete(itemId uint) error {
-	panic("unimplemented")
 }
 
 func (r *ItemRepository) FindAll() (*[]models.Item, error) {
@@ -65,44 +60,16 @@ func (r *ItemRepository) Update(updateItem models.Item) (*models.Item, error) {
 	return &updateItem, nil
 }
 
-func NewItemRepository(db *gorm.DB) IItemRepository {
-	return &ItemRepository{db: db}
-}
+func (r *ItemRepository) Delete(itemId uint) error {
+	deleteItem, err := r.FindById(itemId)
+	if err != nil {
+		return err
+	}
 
-func NewItemMemoryRepository(items []models.Item) *ItemMemoryRepository {
-	return &ItemMemoryRepository{items: items}
-}
-func (r *ItemMemoryRepository) FindAll() (*[]models.Item, error) {
-	return &r.items, nil
-}
-func (r *ItemMemoryRepository) FindById(itemId uint) (*models.Item, error) {
-	for _, v := range r.items {
-		if v.ID == itemId {
-			return &v, nil
-		}
+	// 物理削除したい時はDeleteの前にUnscoped().をつける
+	result := r.db.Delete(deleteItem)
+	if result.Error != nil {
+		return result.Error
 	}
-	return nil, errors.New("item not found")
-}
-func (r *ItemMemoryRepository) Create(newItem models.Item) (*models.Item, error) {
-	newItem.ID = uint(len(r.items) + 1)
-	r.items = append(r.items, newItem)
-	return &newItem, nil
-}
-func (r *ItemMemoryRepository) Update(updateItem *models.Item) (*models.Item, error) {
-	for i, v := range r.items {
-		if v.ID == updateItem.ID {
-			r.items[i] = *updateItem
-			return &r.items[i], nil
-		}
-	}
-	return nil, errors.New("unexpected error")
-}
-func (r *ItemMemoryRepository) Delete(itemId uint) error {
-	for i, v := range r.items {
-		if v.ID == itemId {
-			r.items = append(r.items[:i], r.items[i+1:]...)
-			return nil
-		}
-	}
-	return errors.New("item not found")
+	return nil
 }
