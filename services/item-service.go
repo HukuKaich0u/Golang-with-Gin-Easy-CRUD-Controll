@@ -55,7 +55,7 @@ func (s *ItemService) Update(itemId uint, updateItemInput dto.UpdateItemInput) (
 	if updateItemInput.SoldOut != nil {
 		targetItem.SoldOut = *updateItemInput.SoldOut
 	}
-	return s.repository.Update(targetItem)
+	return s.repository.Update(*targetItem)
 }
 func (s *ItemService) Delete(itemId uint) error {
 	return s.repository.Delete(itemId)
